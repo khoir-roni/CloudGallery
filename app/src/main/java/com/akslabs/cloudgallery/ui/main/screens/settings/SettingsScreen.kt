@@ -379,6 +379,9 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
     var isAutoPhotoBackupEnabled by remember {
         mutableStateOf(Preferences.getBoolean(Preferences.isAutoBackupEnabledKey, false))
     }
+    var isBackupUntilFinishedEnabled by remember {
+        mutableStateOf(Preferences.getBoolean(Preferences.isBackupUntilFinishedEnabledKey, false))
+    }
     var isAutoExportDatabaseEnabled by remember {
         mutableStateOf(Preferences.getBoolean(Preferences.isAutoExportDatabaseEnabledKey, false))
     }
@@ -745,6 +748,21 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
                             Preferences.edit { putBoolean(Preferences.syncImagePreviewKey, enabled) }
                             scope.launch {
                                 context.toastFromMainThread(if (enabled) "Image preview sync enabled" else "Image preview sync disabled")
+                            }
+                        }
+                    )
+
+                    SettingsSwitchItem(
+                        icon = Icons.Rounded.Sync,
+                        title = "Backup Until Finished",
+                        subtitle = "Back up all pending photos in one run instead of batches of 50",
+                        isChecked = isBackupUntilFinishedEnabled,
+                        enabled = isAutoPhotoBackupEnabled,
+                        onCheckedChange = { enabled ->
+                            isBackupUntilFinishedEnabled = enabled
+                            Preferences.edit { putBoolean(Preferences.isBackupUntilFinishedEnabledKey, enabled) }
+                            scope.launch {
+                                context.toastFromMainThread(if (enabled) "Backup until finished enabled" else "Backup until finished disabled")
                             }
                         }
                     )

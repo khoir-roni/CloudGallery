@@ -46,6 +46,15 @@ class PeriodicPhotoBackupWorker(
     private val botApi: BotApi = BotApi
 
     override suspend fun doWork(): Result {
+        val backupUntilFinished = Preferences.getBoolean(Preferences.isBackupUntilFinishedEnabledKey, false)
+        if (backupUntilFinished) {
+            try {
+                setForeground(getForegroundInfo())
+            } catch (e: IllegalStateException) {
+                Log.d("PeriodicBackup", "Failed to set foreground service: ${e.localizedMessage}")
+            }
+        }
+
         val uploadType = params.inputData.getString(KEY_UPLOAD_TYPE)
         val deviceId = Preferences.getOrCreateDeviceId()
         val photoDao = DbHolder.database.photoDao()
@@ -85,7 +94,7 @@ class PeriodicPhotoBackupWorker(
                 filtered
             }
         }
-        val imageList = pendingPhotos.take(MAX_BATCH_SIZE)
+        val imageList = if (backupUntilFinished) pendingPhotos else pendingPhotos.take(MAX_BATCH_SIZE)
 
         return withContext(Dispatchers.IO) {
             try {
@@ -105,6 +114,10 @@ class PeriodicPhotoBackupWorker(
                 val parallelism = if (isSyncImagePreviewEnabled()) 1 else PARALLELISM
                 val chunks = imageList.chunked(parallelism)
                 for ((chunkIndex, chunk) in chunks.withIndex()) {
+                    if (isStopped) {
+                        Log.d("PeriodicBackup", "Worker stopped/cancelled, aborting loop.")
+                        break
+                    }
                     val results = coroutineScope {
                         chunk.mapIndexed { indexInChunk, photo ->
                             async(Dispatchers.IO) {
