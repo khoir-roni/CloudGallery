@@ -153,10 +153,17 @@
 
 # Preserve Entities and DAOs
 -keep class com.akslabs.cloudgallery.database.** { *; }
--keep class com.akslabs.cloudgallery.data.localdb.entities.Photo { *; }
+-keep class com.akslabs.cloudgallery.data.localdb.entities.** { *; }
 
-# Telegram bot api
+# Telegram bot api and its entities
 -keep class com.github.kotlintelegrambot.** { *; }
+-keep interface com.github.kotlintelegrambot.** { *; }
+-keep class com.akslabs.cloudgallery.api.** { *; }
+
+# Gson requirements
+-keepattributes Signature, EnclosingMethod, InnerClasses
+-keep class com.google.gson.reflect.TypeToken
+-keep class com.google.gson.** { *; }
 
 -dontwarn android.arch.util.paging.CountedDataSource
 -dontwarn android.arch.persistence.room.paging.LimitOffsetDataSource
