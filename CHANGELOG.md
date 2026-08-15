@@ -7,6 +7,7 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 ## [0.71] - 2026-08-14
 
 ### Ditambahkan
+- **Konfigurasi Telegram di Settings**: Menambahkan kemampuan untuk memperbarui *Bot Token* dan *Group/Chat ID* langsung dari menu pengaturan tanpa harus melakukan instal ulang aplikasi atau melewati ulang proses *onboarding*.
 - **Fitur Toggle "Backup Until Finished"**:
   - Pilihan pengaturan baru di menu *Settings* untuk mengunggah seluruh foto yang tertunda sekaligus, menggantikan batasan default (50 foto per batch).
   - Integrasi dengan Android *Foreground Service* agar proses pengunggahan di latar belakang stabil dan tidak dihentikan paksa oleh sistem operasi saat mengunggah banyak foto.

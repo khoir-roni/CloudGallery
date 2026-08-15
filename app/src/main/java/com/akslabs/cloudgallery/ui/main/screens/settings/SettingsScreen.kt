@@ -227,6 +227,73 @@ fun SettingsSwitchItem(
 }
 
 /**
+ * Settings item that opens a dialog with a text field for editing
+ */
+@Composable
+fun SettingsEditDialogItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    currentValue: String,
+    onValueChange: (String) -> Unit,
+    isPassword: Boolean = false,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    var textValue by remember(showDialog) { mutableStateOf(currentValue) }
+
+    SettingsItem(
+        icon = icon,
+        title = title,
+        subtitle = if (isPassword) "••••••••" else currentValue.ifBlank { subtitle },
+        onClick = { if (enabled) showDialog = true },
+        enabled = enabled,
+        modifier = modifier
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = {
+                Text(
+                    text = "Edit $title",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column(modifier = Modifier.padding(top = 8.dp)) {
+                    OutlinedTextField(
+                        value = textValue,
+                        onValueChange = { textValue = it },
+                        label = { Text(title) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onValueChange(textValue)
+                        showDialog = false
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+}
+
+/**
  * Simple settings item component matching the target design
  */
 @Composable
@@ -406,6 +473,14 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
     var currentPreviewSize by remember {
         mutableStateOf(Preferences.getInt(Preferences.syncImagePreviewSizeKey, 25))
     }
+    
+    var botToken by remember {
+        mutableStateOf(Preferences.getEncryptedString(Preferences.botToken, ""))
+    }
+    var channelId by remember {
+        mutableStateOf(Preferences.getEncryptedLong(Preferences.channelId, 0L).toString())
+    }
+
     var backupStats by remember { mutableStateOf<BackupHelper.BackupStats?>(null) }
     val totalCloudPhotosCount by DbHolder.database.remotePhotoDao()
         .getTotalCountFlow().collectAsStateWithLifecycle(initialValue = 0)
@@ -870,6 +945,60 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
                             }
                         }
                     }
+                }
+            }
+
+            // TELEGRAM CONFIGURATION SECTION
+            Spacer(modifier = Modifier.height(16.dp))
+            SettingsSection(title = "Telegram Configuration")
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerLow
+            ) {
+                Column {
+                    SettingsEditDialogItem(
+                        icon = Icons.Rounded.VpnKey,
+                        title = "Bot Token",
+                        subtitle = "Authentication token for your Telegram Bot",
+                        currentValue = botToken,
+                        isPassword = true,
+                        onValueChange = { newValue ->
+                            if (newValue.isNotBlank()) {
+                                Preferences.editEncrypted {
+                                    putString(Preferences.botToken, newValue)
+                                }
+                                botToken = newValue
+                                com.akslabs.cloudgallery.api.BotApi.create()
+                                scope.launch {
+                                    context.toastFromMainThread("Bot Token updated and re-initialized")
+                                }
+                            }
+                        }
+                    )
+
+                    SettingsEditDialogItem(
+                        icon = Icons.Rounded.Chat,
+                        title = "Group/Chat ID",
+                        subtitle = "Telegram target for your images",
+                        currentValue = if (channelId == "0") "" else channelId,
+                        onValueChange = { newValue ->
+                            val id = newValue.toLongOrNull()
+                            if (id != null) {
+                                Preferences.editEncrypted {
+                                    putLong(Preferences.channelId, id)
+                                }
+                                channelId = newValue
+                                scope.launch {
+                                    context.toastFromMainThread("Group ID updated")
+                                }
+                            } else {
+                                scope.launch {
+                                    context.toastFromMainThread("Invalid Chat ID format")
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
