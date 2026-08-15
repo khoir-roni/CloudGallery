@@ -4,6 +4,16 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 
 ---
 
+## [0.74] - 2026-08-15
+
+### Diperbaiki
+- **Stabilitas Import/Sync Database**:
+  - Mengganti penggunaan *spread operator* dengan List-based insertion untuk mencegah crash saat memproses database dengan jumlah foto yang sangat besar.
+  - Memperbaiki alur import yang sebelumnya menyebabkan data "hilang" karena dihapus otomatis oleh proses sinkronisasi background. Sekarang aplikasi memicu sinkronisasi manual segera setelah import selesai.
+  - Memperbaiki logika identifikasi perangkat saat import agar tetap sinkron meskipun aplikasi di-instal ulang.
+
+---
+
 ## [0.73] - 2026-08-15
 
 ### Diperbaiki

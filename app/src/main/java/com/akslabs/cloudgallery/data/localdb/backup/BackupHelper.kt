@@ -94,16 +94,16 @@ object BackupHelper {
 
                 Log.i(TAG, "Importing from ${if (isSameDevice) "same" else "different"} device (${backupFile.deviceId})")
                 
-                // Merge all photos (local database records)
-                // insertPhotos uses IGNORE strategy, so existing records won't be overwritten
-                val photoResult = DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
+                // Merge all photos (local database records) using safer list-based insertion
+                val photoResult = DbHolder.database.photoDao().insertPhotosList(backupFile.photos)
                 
                 // Merge all remote photo records
-                val remoteResult = DbHolder.database.remotePhotoDao().insertAllIfNotExists(
-                    *backupFile.remotePhotos.toTypedArray()
-                )
+                val remoteResult = DbHolder.database.remotePhotoDao().insertAllIfNotExistsList(backupFile.remotePhotos)
                 
                 Log.i(TAG, "Import complete: ${photoResult.size} photos merged, ${backupFile.remotePhotos.size} remote records merged")
+
+                // Trigger a sync to ensure DB matches physical files after import
+                WorkModule.SyncDbMediaStore.enqueue()
             }
             context.toastFromMainThread(context.getString(R.string.import_successful))
         } catch (e: Exception) {
@@ -219,10 +219,13 @@ object BackupHelper {
                 }
 
                 Log.i(TAG, "Importing photos and remotePhotos (Merge Mode)")
-                DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
-                DbHolder.database.remotePhotoDao().insertAllIfNotExists(*backupFile.remotePhotos.toTypedArray())
+                DbHolder.database.photoDao().insertPhotosList(backupFile.photos)
+                DbHolder.database.remotePhotoDao().insertAllIfNotExistsList(backupFile.remotePhotos)
 
                 Log.i(TAG, "✅ Database imported successfully")
+
+                // Trigger a sync to ensure DB matches physical files after import
+                WorkModule.SyncDbMediaStore.enqueue()
 
                 Preferences.edit {
                     putLong("last_database_import_timestamp", System.currentTimeMillis())

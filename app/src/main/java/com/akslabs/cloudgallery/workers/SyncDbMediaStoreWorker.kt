@@ -52,7 +52,7 @@ class SyncDbMediaStoreWorker(
                         }
                     }
                 }
-                DbHolder.database.photoDao().insertPhotos(*photosOnDevice.toTypedArray())
+                DbHolder.database.photoDao().insertPhotosList(photosOnDevice)
                 val photosInDb = DbHolder.database.photoDao().getAll()
                 // Only delete photos that are truly gone from device AND have no cloud backup
                 // Photos with remoteId are cloud-linked — preserve them even if local URI changed

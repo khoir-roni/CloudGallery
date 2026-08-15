@@ -36,6 +36,9 @@ interface PhotoDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertPhotos(vararg photos: Photo): List<Long>
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertPhotosList(photos: List<Photo>): List<Long>
+
     @Update
     suspend fun updatePhotos(vararg photos: Photo)
 
