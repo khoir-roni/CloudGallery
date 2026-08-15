@@ -32,6 +32,10 @@ object Preferences {
         return id
     }
 
+    fun setDeviceId(id: String) {
+        editEncrypted { putString(deviceIdKey, id) }
+    }
+
     fun getDeviceName(): String {
         val default = "${Build.MANUFACTURER} ${Build.MODEL}"
         return getString(deviceNameKey, default)

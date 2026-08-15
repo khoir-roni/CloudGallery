@@ -4,6 +4,13 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 
 ---
 
+## [0.73] - 2026-08-15
+
+### Diperbaiki
+- **Bug Import Database**: Memperbaiki masalah di mana data foto lokal tidak ter-import jika melakukan instal ulang aplikasi (karena perubahan ID perangkat). Sekarang aplikasi akan otomatis mengenali dan mengadopsi identitas perangkat dari file backup jika database dalam keadaan kosong.
+
+---
+
 ## [0.72] - 2026-08-15
 
 ### Ditambahkan

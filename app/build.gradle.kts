@@ -16,8 +16,8 @@ android {
         applicationId = "com.akslabs.cloudgallery"
         minSdk = 29  // Keep Android 10 as minimum
         targetSdk = 36  // Updated to target Android 15 (latest stable)
-        versionCode = 10
-        versionName = "0.72"
+        versionCode = 11
+        versionName = "0.73"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

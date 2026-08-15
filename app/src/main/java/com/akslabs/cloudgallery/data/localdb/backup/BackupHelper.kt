@@ -74,8 +74,8 @@ object BackupHelper {
 
     /**
      * Import database backup with device-aware merge:
-     * - Same device: full import (photos + remotePhotos)
-     * - Different device: only merge remotePhotos (skip photos to avoid localId collisions)
+     * - Merges both local photos and remote photo records.
+     * - If the current device is empty, adopts the device ID from the backup to maintain continuity.
      */
     suspend fun importDatabase(uri: Uri, context: Context) {
         try {
@@ -83,26 +83,32 @@ object BackupHelper {
                 val backupFile = mapper.readValue(it.readBytes(), BackupFile::class.java)
                 val currentDeviceId = Preferences.getOrCreateDeviceId()
                 val isSameDevice = backupFile.deviceId.isEmpty() || backupFile.deviceId == currentDeviceId
-
-                if (isSameDevice) {
-                    // Same device — full import
-                    Log.i(TAG, "Importing from same device (${backupFile.deviceId}): full import")
-                    DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
-                    DbHolder.database.remotePhotoDao().insertAllIfNotExists(
-                        *backupFile.remotePhotos.toTypedArray()
-                    )
-                } else {
-                    // Different device — only merge remotePhotos to avoid localId collisions
-                    Log.i(TAG, "Importing from different device (${backupFile.deviceId} → $currentDeviceId): remotePhotos only")
-                    DbHolder.database.remotePhotoDao().insertAllIfNotExists(
-                        *backupFile.remotePhotos.toTypedArray()
-                    )
+                
+                val currentPhotosCount = DbHolder.database.photoDao().getCount()
+                
+                // If device is empty (e.g. fresh install), adopt the old device ID to maintain sync state
+                if (currentPhotosCount == 0 && backupFile.deviceId.isNotEmpty() && !isSameDevice) {
+                    Log.i(TAG, "Fresh install detected. Adopting device ID from backup: ${backupFile.deviceId}")
+                    Preferences.setDeviceId(backupFile.deviceId)
                 }
+
+                Log.i(TAG, "Importing from ${if (isSameDevice) "same" else "different"} device (${backupFile.deviceId})")
+                
+                // Merge all photos (local database records)
+                // insertPhotos uses IGNORE strategy, so existing records won't be overwritten
+                val photoResult = DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
+                
+                // Merge all remote photo records
+                val remoteResult = DbHolder.database.remotePhotoDao().insertAllIfNotExists(
+                    *backupFile.remotePhotos.toTypedArray()
+                )
+                
+                Log.i(TAG, "Import complete: ${photoResult.size} photos merged, ${backupFile.remotePhotos.size} remote records merged")
             }
             context.toastFromMainThread(context.getString(R.string.import_successful))
         } catch (e: Exception) {
-            Log.d("Import All Photos", "doWork: ${e.localizedMessage}")
-            context.toastFromMainThread(e.localizedMessage)
+            Log.e(TAG, "Error importing database", e)
+            context.toastFromMainThread("Import failed: ${e.localizedMessage}")
         }
     }
 
@@ -204,14 +210,17 @@ object BackupHelper {
 
                 Log.i(TAG, "Database backup downloaded: ${backupFile.photos.size} photos, ${backupFile.remotePhotos.size} remote photos (from device: ${backupFile.deviceId})")
 
-                if (isSameDevice) {
-                    Log.i(TAG, "Importing from same device (${backupFile.deviceId}): full import")
-                    DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
-                    DbHolder.database.remotePhotoDao().insertAllIfNotExists(*backupFile.remotePhotos.toTypedArray())
-                } else {
-                    Log.i(TAG, "Importing from different device (${backupFile.deviceId} → $currentDeviceId): remotePhotos only")
-                    DbHolder.database.remotePhotoDao().insertAllIfNotExists(*backupFile.remotePhotos.toTypedArray())
+                val currentPhotosCount = DbHolder.database.photoDao().getCount()
+                
+                // If device is empty (e.g. fresh install), adopt the old device ID to maintain sync state
+                if (currentPhotosCount == 0 && backupFile.deviceId.isNotEmpty() && !isSameDevice) {
+                    Log.i(TAG, "Fresh install detected. Adopting device ID from backup: ${backupFile.deviceId}")
+                    Preferences.setDeviceId(backupFile.deviceId)
                 }
+
+                Log.i(TAG, "Importing photos and remotePhotos (Merge Mode)")
+                DbHolder.database.photoDao().insertPhotos(*backupFile.photos.toTypedArray())
+                DbHolder.database.remotePhotoDao().insertAllIfNotExists(*backupFile.remotePhotos.toTypedArray())
 
                 Log.i(TAG, "✅ Database imported successfully")
 
