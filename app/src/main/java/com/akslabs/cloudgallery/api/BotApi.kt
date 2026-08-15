@@ -58,12 +58,19 @@ object BotApi {
 
     private val gson: Gson = Gson()
 
+    /**
+     * Creates or recreates the bot instance with the current token from preferences.
+     * This MUST be called whenever the bot token is updated in preferences.
+     */
     fun create() {
+        val currentToken = Preferences.getEncryptedString(
+            Preferences.botToken,
+            SAMPLE_API_KEY
+        )
+        Log.d(TAG, "Initializing bot with token: ${if (currentToken != SAMPLE_API_KEY) currentToken.take(8) + "..." else "SAMPLE_KEY"}")
+        
         bot = bot {
-            token = Preferences.getEncryptedString(
-                Preferences.botToken,
-                SAMPLE_API_KEY
-            )
+            token = currentToken
             dispatch {
                 command("start") {
                     chatId = message.chat.id

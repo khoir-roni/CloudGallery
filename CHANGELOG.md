@@ -16,4 +16,5 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 - Peningkatan versi aplikasi (`versionCode` ke `9` dan `versionName` ke `"0.71"`).
 
 ### Diperbaiki
-- **Masalah Upload pada APK Release**: Menambahkan aturan ProGuard/R8 untuk mencegah penghapusan kode (*obfuscation*) pada library Telegram dan model data, yang sebelumnya menyebabkan kegagalan pengunggahan pada versi *release*.
+- **Masalah Upload pada APK Release**: Menambahkan aturan ProGuard/R8 untuk mencegah penghapusan kode pada library Telegram.
+- **Bot Initialization**: Memperbaiki masalah di mana bot tidak memperbarui token secara otomatis setelah proses Setup selesai, yang sebelumnya menyebabkan error `401 Unauthorized`.

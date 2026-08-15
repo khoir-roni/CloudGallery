@@ -426,6 +426,9 @@ fun GettingStartedScreen(
                                 Preferences.editEncrypted {
                                     putString(Preferences.botToken, botToken)
                                 }
+                                
+                                // RE-INITIALIZE BOT WITH NEW TOKEN
+                                botApi.create()
 
                                 // Validate chat ID
                                 val id = chatId.toLongOrNull()
