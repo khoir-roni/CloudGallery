@@ -47,7 +47,9 @@ class PeriodicPhotoBackupWorker(
 
     override suspend fun doWork(): Result {
         val backupUntilFinished = Preferences.getBoolean(Preferences.isBackupUntilFinishedEnabledKey, false)
-        if (backupUntilFinished) {
+        val batchSize = Preferences.getInt(Preferences.backupBatchSizeKey, 50)
+        
+        if (backupUntilFinished || batchSize > 50) {
             try {
                 setForeground(getForegroundInfo())
             } catch (e: IllegalStateException) {
@@ -94,7 +96,11 @@ class PeriodicPhotoBackupWorker(
                 filtered
             }
         }
-        val imageList = if (backupUntilFinished) pendingPhotos else pendingPhotos.take(MAX_BATCH_SIZE)
+        
+        val imageList = when {
+            backupUntilFinished || batchSize == -1 -> pendingPhotos
+            else -> pendingPhotos.take(batchSize)
+        }
 
         return withContext(Dispatchers.IO) {
             try {

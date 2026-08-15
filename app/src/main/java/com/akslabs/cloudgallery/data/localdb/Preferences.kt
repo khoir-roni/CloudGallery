@@ -47,6 +47,7 @@ object Preferences {
     const val isAutoBackupEnabledKey: String = "isPeriodicPhotoBackupEnabled"
     const val isAutoCloudBackupEnabledKey: String = "isAutoCloudBackupEnabled"
     const val isBackupUntilFinishedEnabledKey: String = "isBackupUntilFinishedEnabled"
+    const val backupBatchSizeKey: String = "backupBatchSize"
     const val autoBackupIntervalKey: String = "periodicPhotoBackupInterval"
     const val autoBackupNetworkTypeKey: String = "periodicPhotoBackupNetworkType"
     const val isAutoExportDatabaseEnabledKey: String = "isAutoExportDatabaseEnabled"

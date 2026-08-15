@@ -4,6 +4,16 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 
 ---
 
+## [0.72] - 2026-08-15
+
+### Ditambahkan
+- **Pengaturan Batch Size Backup**: Sekarang Anda dapat memilih jumlah foto yang akan diunggah dalam satu sesi backup (50, 100, 1000, atau Unlimited).
+
+### Diubah
+- Peningkatan versi aplikasi (`versionCode` ke `10` dan `versionName` ke `"0.72"`).
+
+---
+
 ## [0.71] - 2026-08-14
 
 ### Ditambahkan

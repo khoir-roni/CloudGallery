@@ -446,8 +446,19 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
     var isAutoPhotoBackupEnabled by remember {
         mutableStateOf(Preferences.getBoolean(Preferences.isAutoBackupEnabledKey, false))
     }
-    var isBackupUntilFinishedEnabled by remember {
-        mutableStateOf(Preferences.getBoolean(Preferences.isBackupUntilFinishedEnabledKey, false))
+    var currentBackupBatchSize by remember {
+        mutableStateOf(
+            run {
+                val size = Preferences.getInt(Preferences.backupBatchSizeKey, 50)
+                when (size) {
+                    50 -> "Default (50 images)"
+                    100 -> "100 images"
+                    1000 -> "1000 images"
+                    -1 -> "Unlimited"
+                    else -> "$size images"
+                }
+            }
+        )
     }
     var isAutoExportDatabaseEnabled by remember {
         mutableStateOf(Preferences.getBoolean(Preferences.isAutoExportDatabaseEnabledKey, false))
@@ -827,17 +838,35 @@ fun SettingsScreen(modifier: Modifier = Modifier.clip(RoundedCornerShape(32.dp))
                         }
                     )
 
-                    SettingsSwitchItem(
-                        icon = Icons.Rounded.Sync,
-                        title = "Backup Until Finished",
-                        subtitle = "Back up all pending photos in one run instead of batches of 50",
-                        isChecked = isBackupUntilFinishedEnabled,
+                    SettingsDialogItem(
+                        icon = Icons.Rounded.BatchPrediction,
+                        title = "Backup Batch Size",
+                        subtitle = "Number of photos to back up per run",
+                        currentValue = currentBackupBatchSize,
+                        options = listOf(
+                            "Default (50 images)" to "50",
+                            "100 images" to "100",
+                            "1000 images" to "1000",
+                            "Unlimited / Until Finished" to "-1"
+                        ),
                         enabled = isAutoPhotoBackupEnabled,
-                        onCheckedChange = { enabled ->
-                            isBackupUntilFinishedEnabled = enabled
-                            Preferences.edit { putBoolean(Preferences.isBackupUntilFinishedEnabledKey, enabled) }
+                        onValueChange = { value ->
+                            val size = value.toInt()
+                            Preferences.edit {
+                                putInt(Preferences.backupBatchSizeKey, size)
+                                // Also update the old boolean for backward compatibility if needed, 
+                                // but we'll primarily use the batch size now.
+                                putBoolean(Preferences.isBackupUntilFinishedEnabledKey, size == -1)
+                            }
+                            currentBackupBatchSize = when (size) {
+                                50 -> "Default (50 images)"
+                                100 -> "100 images"
+                                1000 -> "1000 images"
+                                -1 -> "Unlimited"
+                                else -> "$size images"
+                            }
                             scope.launch {
-                                context.toastFromMainThread(if (enabled) "Backup until finished enabled" else "Backup until finished disabled")
+                                context.toastFromMainThread("Backup batch size set to $currentBackupBatchSize")
                             }
                         }
                     )
