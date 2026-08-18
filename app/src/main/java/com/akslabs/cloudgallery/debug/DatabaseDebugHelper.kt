@@ -19,13 +19,17 @@ object DatabaseDebugHelper {
             
             // Count records
             val allPhotos = db.photoDao().getAll()
-            val allRemotePhotos = db.remotePhotoDao().getAll()
+            val allRemotePhotos = db.remotePhotoDao().getAllIncludingDeleted()
+            val activeRemotePhotos = allRemotePhotos.filter { it.status == "ACTIVE" }
+            val deletedRemotePhotos = allRemotePhotos.filter { it.status == "DELETED" }
             val uploadedPhotos = allPhotos.filter { it.remoteId != null }
             
             Log.i(TAG, "Record counts:")
             Log.i(TAG, "  Total photos: ${allPhotos.size}")
             Log.i(TAG, "  Photos with remoteId: ${uploadedPhotos.size}")
-            Log.i(TAG, "  Total remote photos: ${allRemotePhotos.size}")
+            Log.i(TAG, "  Total remote photos (all): ${allRemotePhotos.size}")
+            Log.i(TAG, "  Active remote photos: ${activeRemotePhotos.size}")
+            Log.i(TAG, "  Deleted remote photos: ${deletedRemotePhotos.size}")
             
             // Sample data
             if (uploadedPhotos.isNotEmpty()) {

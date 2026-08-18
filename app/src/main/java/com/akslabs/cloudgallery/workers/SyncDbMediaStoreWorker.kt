@@ -41,28 +41,36 @@ class SyncDbMediaStoreWorker(
                     null
                 )
                 val photosOnDevice = mutableListOf<Photo>()
+                val photosOnDeviceIds = mutableSetOf<String>()
                 cursor?.use {
                     while (cursor.moveToNext()) {
                         try {
                             val photo = cursor.getPhotoFromCursor()
                             // Set deviceId on new photos
-                            photosOnDevice.add(photo.copy(deviceId = deviceId))
+                            val p = photo.copy(deviceId = deviceId)
+                            photosOnDevice.add(p)
+                            photosOnDeviceIds.add(p.localId)
                         } catch (e: Exception) {
                             Log.d(TAG, "doWork: ${e.localizedMessage}")
                         }
                     }
                 }
                 DbHolder.database.photoDao().insertPhotosList(photosOnDevice)
+                
                 val photosInDb = DbHolder.database.photoDao().getAll()
                 // Only delete photos that are truly gone from device AND have no cloud backup
                 // Photos with remoteId are cloud-linked — preserve them even if local URI changed
-                val deletedPhotos = photosInDb.filter { photo ->
-                    photosOnDevice.none { it.localId == photo.localId } && photo.remoteId == null
+                val deletedPhotoIds = photosInDb.filter { photo ->
+                    !photosOnDeviceIds.contains(photo.localId) && photo.remoteId == null
+                }.map { it.localId }
+                
+                Log.d(TAG, "doWork: Found ${deletedPhotoIds.size} stale photos to remove")
+                
+                // Batch delete in chunks of 500 to avoid SQLite parameter limit and UI thread congestion
+                deletedPhotoIds.chunked(500).forEach { chunk ->
+                    DbHolder.database.photoDao().deleteByIds(chunk)
                 }
-                Log.d(TAG, "doWork: $deletedPhotos")
-                deletedPhotos.fastForEach {
-                    DbHolder.database.photoDao().deleteById(it.localId)
-                }
+                
                 Log.d("Sync MediaStore", "doWork: Success (deviceId=$deviceId)")
                 Result.success()
             } catch (e: Exception) {

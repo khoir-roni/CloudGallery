@@ -8,6 +8,7 @@ import com.akslabs.cloudgallery.api.BotApi
 import com.akslabs.cloudgallery.data.localdb.DbHolder
 import com.akslabs.cloudgallery.data.localdb.Preferences
 import com.akslabs.cloudgallery.utils.toastFromMainThread
+import com.akslabs.cloudgallery.workers.WorkModule
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +25,6 @@ object BackupHelper {
 
     private val mapper by lazy {
         ObjectMapper().apply {
-            // Configure to ignore unknown fields during deserialization
-            // This makes import robust against schema changes
             configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
         }
     }
@@ -45,7 +44,6 @@ object BackupHelper {
                 remotePhotos = remotePhotos
             )
             
-            // Handle both specific file URIs and directory (tree) URIs
             val targetUri = if (uri.toString().contains("tree")) {
                 val directory = DocumentFile.fromTreeUri(context, uri)
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd_hh-mm-a", Locale.getDefault())
@@ -68,7 +66,7 @@ object BackupHelper {
             context.toastFromMainThread(context.getString(R.string.export_successful))
         } catch (e: Exception) {
             context.toastFromMainThread(e.localizedMessage)
-            Log.d("Export All Photos", "doWork: ${e.localizedMessage}")
+            Log.e(TAG, "Export failed", e)
         }
     }
 
@@ -79,32 +77,36 @@ object BackupHelper {
      */
     suspend fun importDatabase(uri: Uri, context: Context) {
         try {
-            context.contentResolver.openInputStream(uri)?.use {
-                val backupFile = mapper.readValue(it.readBytes(), BackupFile::class.java)
-                val currentDeviceId = Preferences.getOrCreateDeviceId()
-                val isSameDevice = backupFile.deviceId.isEmpty() || backupFile.deviceId == currentDeviceId
+            val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?: throw Exception("Failed to read backup file")
                 
-                val currentPhotosCount = DbHolder.database.photoDao().getCount()
-                
-                // If device is empty (e.g. fresh install), adopt the old device ID to maintain sync state
-                if (currentPhotosCount == 0 && backupFile.deviceId.isNotEmpty() && !isSameDevice) {
-                    Log.i(TAG, "Fresh install detected. Adopting device ID from backup: ${backupFile.deviceId}")
-                    Preferences.setDeviceId(backupFile.deviceId)
-                }
-
-                Log.i(TAG, "Importing from ${if (isSameDevice) "same" else "different"} device (${backupFile.deviceId})")
-                
-                // Merge all photos (local database records) using safer list-based insertion
-                val photoResult = DbHolder.database.photoDao().insertPhotosList(backupFile.photos)
-                
-                // Merge all remote photo records
-                val remoteResult = DbHolder.database.remotePhotoDao().insertAllIfNotExistsList(backupFile.remotePhotos)
-                
-                Log.i(TAG, "Import complete: ${photoResult.size} photos merged, ${backupFile.remotePhotos.size} remote records merged")
-
-                // Trigger a sync to ensure DB matches physical files after import
-                WorkModule.SyncDbMediaStore.enqueue()
+            val backupFile = mapper.readValue(bytes, BackupFile::class.java)
+            val currentDeviceId = Preferences.getOrCreateDeviceId()
+            val isSameDevice = backupFile.deviceId.isEmpty() || backupFile.deviceId == currentDeviceId
+            
+            val currentPhotosCount = DbHolder.database.photoDao().getCount()
+            
+            // If device is empty (e.g. fresh install), adopt the old device ID to maintain sync state
+            if (currentPhotosCount == 0 && backupFile.deviceId.isNotEmpty() && !isSameDevice) {
+                Log.i(TAG, "Fresh install detected. Adopting device ID from backup: ${backupFile.deviceId}")
+                Preferences.setDeviceId(backupFile.deviceId)
             }
+
+            Log.i(TAG, "Importing from ${if (isSameDevice) "same" else "different"} device (Backup: ${backupFile.deviceId} → Current: $currentDeviceId)")
+            
+            // Merge all photos (local database records) using safer list-based insertion
+            Log.i(TAG, "Merging ${backupFile.photos.size} local photo records")
+            val photoResult = DbHolder.database.photoDao().insertPhotosList(backupFile.photos)
+            
+            // Merge all remote photo records
+            Log.i(TAG, "Merging ${backupFile.remotePhotos.size} remote photo records")
+            DbHolder.database.remotePhotoDao().insertAllIfNotExistsList(backupFile.remotePhotos)
+            
+            Log.i(TAG, "Import complete: ${photoResult.size} photos inserted/updated, ${backupFile.remotePhotos.size} remote records merged")
+
+            // Trigger a sync to ensure DB matches physical files after import
+            WorkModule.SyncMediaStore.enqueueInstant()
+            
             context.toastFromMainThread(context.getString(R.string.import_successful))
         } catch (e: Exception) {
             Log.e(TAG, "Error importing database", e)
@@ -152,7 +154,6 @@ object BackupHelper {
 
                 Log.i(TAG, "Created backup file: $fileName (${tempFile.length()} bytes)")
 
-                // Upload with device tag in caption
                 val caption = "#db_backup #device:$deviceId $deviceName"
                 Log.i(TAG, "Uploading to Telegram channel: $channelId")
                 val uploadResult = BotApi.sendFile(tempFile, channelId, caption)
@@ -212,7 +213,6 @@ object BackupHelper {
 
                 val currentPhotosCount = DbHolder.database.photoDao().getCount()
                 
-                // If device is empty (e.g. fresh install), adopt the old device ID to maintain sync state
                 if (currentPhotosCount == 0 && backupFile.deviceId.isNotEmpty() && !isSameDevice) {
                     Log.i(TAG, "Fresh install detected. Adopting device ID from backup: ${backupFile.deviceId}")
                     Preferences.setDeviceId(backupFile.deviceId)
@@ -224,8 +224,7 @@ object BackupHelper {
 
                 Log.i(TAG, "✅ Database imported successfully")
 
-                // Trigger a sync to ensure DB matches physical files after import
-                WorkModule.SyncDbMediaStore.enqueue()
+                WorkModule.SyncMediaStore.enqueueInstant()
 
                 Preferences.edit {
                     putLong("last_database_import_timestamp", System.currentTimeMillis())
@@ -243,9 +242,6 @@ object BackupHelper {
         }
     }
 
-    /**
-     * Check if database backup is up to date
-     */
     suspend fun isDatabaseBackupUpToDate(
         currentPhotos: Int? = null,
         currentRemotePhotos: Int? = null
@@ -261,9 +257,6 @@ object BackupHelper {
 
                 val hasBackup = lastBackupTimestamp > 0
                 val dataUnchanged = (photosCount == lastBackupPhotos && remotePhotosCount == lastBackupRemotePhotos)
-
-                Log.d(TAG, "Backup status - Has backup: $hasBackup, Data unchanged: $dataUnchanged")
-                Log.d(TAG, "Current: $photosCount photos, $remotePhotosCount remote | Last backup: $lastBackupPhotos photos, $lastBackupRemotePhotos remote")
 
                 hasBackup && dataUnchanged
 

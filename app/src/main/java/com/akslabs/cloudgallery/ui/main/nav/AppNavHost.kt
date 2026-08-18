@@ -139,7 +139,7 @@ fun AppNavHost(
         }
 
         composable(route = Screens.RemotePhotos.route) {
-            val allCloudPhotos = viewModel.allCloudPhotosFlow.collectAsLazyPagingItems()
+            val allCloudPhotos by viewModel.allCloudPhotosList.collectAsStateWithLifecycle()
             val totalCloudPhotosCount by viewModel.totalCloudPhotosCount.collectAsStateWithLifecycle()
             val lastViewedId by viewModel.lastViewedPhotoId.collectAsStateWithLifecycle()
 

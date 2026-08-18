@@ -165,7 +165,7 @@ object CloudPhotoSyncService {
      * Check if a sync should be performed based on last sync timestamp
      */
     private fun shouldPerformSync(): Boolean {
-        val lastSyncTimestamp = Preferences.getString(LAST_SYNC_TIMESTAMP_KEY, "0").toLongOrNull() ?: 0L
+        val lastSyncTimestamp = Preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0L)
         val currentTime = System.currentTimeMillis()
         val timeSinceLastSync = currentTime - lastSyncTimestamp
         val syncIntervalMs = TimeUnit.HOURS.toMillis(SYNC_INTERVAL_HOURS.toLong())
@@ -181,7 +181,7 @@ object CloudPhotoSyncService {
     private fun updateLastSyncTimestamp() {
         val currentTime = System.currentTimeMillis()
         Preferences.edit {
-            putString(LAST_SYNC_TIMESTAMP_KEY, currentTime.toString())
+            putLong(LAST_SYNC_TIMESTAMP_KEY, currentTime)
         }
         Log.d(TAG, "Updated last sync timestamp to: $currentTime")
     }
@@ -236,7 +236,7 @@ object CloudPhotoSyncService {
         Log.i(TAG, "Force sync requested")
         // Reset last sync timestamp to force sync
         Preferences.edit {
-            putString(LAST_SYNC_TIMESTAMP_KEY, "0")
+            putLong(LAST_SYNC_TIMESTAMP_KEY, 0L)
         }
 
         // Perform full sync
@@ -278,7 +278,7 @@ object CloudPhotoSyncService {
         return withContext(Dispatchers.IO) {
             try {
                 val totalRemotePhotos = DbHolder.database.remotePhotoDao().getAll().size
-                val lastSyncTimestamp = Preferences.getString(LAST_SYNC_TIMESTAMP_KEY, "0").toLongOrNull() ?: 0L
+                val lastSyncTimestamp = Preferences.getLong(LAST_SYNC_TIMESTAMP_KEY, 0L)
                 val timeSinceLastSync = System.currentTimeMillis() - lastSyncTimestamp
                 
                 SyncStatistics(

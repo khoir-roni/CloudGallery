@@ -45,6 +45,9 @@ interface PhotoDao {
     @Query("DELETE FROM photos WHERE localId = :id")
     suspend fun deleteById(id: String)
 
+    @Query("DELETE FROM photos WHERE localId IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
+
     @Query("DELETE FROM photos")
     suspend fun deleteAll()
 

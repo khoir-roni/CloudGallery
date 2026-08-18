@@ -4,6 +4,20 @@ Semua perubahan penting pada proyek **CloudGallery** (Chitralaya) akan dicatat d
 
 ---
 
+## [0.75] - 2026-08-18
+
+### Diperbaiki
+- **Optimasi Performa Grid Cloud**: Mengganti sistem Paging dengan pemuatan daftar lengkap untuk memastikan ribuan foto cloud ter-load dan terkelompokkan berdasarkan tanggal secara instan tanpa ada data yang tertinggal.
+- **Stabilitas UI (Anti-Freeze)**: Optimalisasi proses sinkronisasi database dengan sistem *Batch Delete* dan pencarian efisien untuk mencegah aplikasi macet (frozen) saat memproses belasan ribu data foto.
+- **Kompatibilitas Database (v11)**: Menambahkan dukungan field `topicId` dan `topicName` (info album) pada tabel foto lokal agar riwayat album dari perangkat lama tetap terjaga.
+- **Bug Sinkronisasi Cloud**: Memperbaiki `ClassCastException` pada penyimpanan data preferensi waktu sinkronisasi.
+
+### Diubah
+- Peningkatan versi aplikasi (`versionCode` ke `13` dan `versionName` ke `"0.75"`).
+- Perbaikan konfigurasi JDK pada proyek untuk kompatibilitas build yang lebih baik.
+
+---
+
 ## [0.74] - 2026-08-15
 
 ### Diperbaiki

@@ -146,6 +146,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         ).flow
     }.cachedIn(viewModelScope)
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val allCloudPhotosList: StateFlow<List<RemotePhoto>> = _selectedTopicAlbumId.flatMapLatest { albumId ->
+        if (albumId == -1L) {
+            DbHolder.database.remotePhotoDao().getAllFlow()
+        } else {
+            val currentAlbums = topicAlbums.value
+            val topicName = currentAlbums.find { it.id == albumId }?.label
+            if (topicName != null && topicName != "All") {
+                DbHolder.database.remotePhotoDao().getByTopicNameFlow(topicName)
+            } else {
+                DbHolder.database.remotePhotoDao().getAllFlow()
+            }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val localPhotosCount: StateFlow<Int> by lazy {
         DbHolder.database.photoDao().getAllCountFlow()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)

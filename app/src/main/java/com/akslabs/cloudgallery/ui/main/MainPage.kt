@@ -123,7 +123,6 @@ fun MainPage(viewModel: MainViewModel = screenScopedViewModel()) {
     val photoCounts = listOf(localPhotosCount, cloudPhotosCount)
 
     val localPhotos = viewModel.localPhotosFlow.collectAsLazyPagingItems()
-    val allCloudPhotos = viewModel.allCloudPhotosFlow.collectAsLazyPagingItems()
 
     val areAllSelected = remember(selectedPhotos, currentRoute, localPhotosCount, cloudPhotosCount, deletedPhotosCount) {
         val totalCount = when (currentRoute) {
